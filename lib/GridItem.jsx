@@ -75,6 +75,7 @@ export default class GridItem extends React.Component {
     isDraggable: PropTypes.bool.isRequired,
     isResizable: PropTypes.bool.isRequired,
     static: PropTypes.bool,
+    container: PropTypes.bool,
 
     // Use CSS transforms instead of top/left
     useCSSTransforms: PropTypes.bool.isRequired,
@@ -366,6 +367,7 @@ export default class GridItem extends React.Component {
         child.props.className || '',
         this.props.className,
         this.props.static ? 'static' : '',
+        this.props.container ? 'container' : '',
         this.state.resizing ? 'resizing' : '',
         this.state.dragging ? 'react-draggable-dragging' : '',
         useCSSTransforms ? 'cssTransforms' : ''
