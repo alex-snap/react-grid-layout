@@ -1,6 +1,7 @@
 'use strict';
 
 exports.__esModule = true;
+exports.MoveAwayStrategy = undefined;
 
 var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
 
@@ -37,6 +38,18 @@ var _react2 = _interopRequireDefault(_react);
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var isProduction = process.env.NODE_ENV === 'production';
+
+/**
+ * @enum
+ * @type {string}
+ */
+var MoveAwayStrategy = exports.MoveAwayStrategy = {
+  // X: 'x',
+  Y: 'y',
+  // Swap: 'swap',
+  SwapX: 'swapX'
+  // SwapY: 'swapY'
+};
 
 /**
  * Return the bottom coordinate of the layout.
@@ -104,9 +117,10 @@ function collides(l1, l2) {
  * @param  {Array} layout Layout.
  * @param  {Boolean} verticalCompact Whether or not to compact the layout
  *   vertically.
+ * @param {string} strategy
  * @return {Array}       Compacted Layout.
  */
-function compact(layout, verticalCompact) {
+function compact(layout, verticalCompact, strategy) {
   // Statics go in the compareWith array right away so items flow around them.
   var compareWith = getStatics(layout);
   // We go through the items by row and column.
@@ -119,7 +133,7 @@ function compact(layout, verticalCompact) {
 
     // Don't move static elements
     if (!l.static && !l.container) {
-      l = compactItem(compareWith, l, verticalCompact);
+      l = compactItem(compareWith, l, verticalCompact, strategy);
 
       // Add to comparison array. We only collide with items before this one.
       // Statics are already in this array.
@@ -139,25 +153,34 @@ function compact(layout, verticalCompact) {
 /**
  * Compact an item in the layout.
  */
-function compactItem(compareWith, l, verticalCompact) {
-  if (verticalCompact) {
-    // Bottom 'y' possible is the bottom of the layout.
-    // This allows you to do nice stuff like specify {y: Infinity}
-    // This is here because the layout must be sorted in order to get the correct bottom `y`.
-    l.y = Math.min(bottom(compareWith), l.y);
-
-    // Move the element up as far as it can go without colliding.
-    while (l.y > 0 && !getFirstCollision(compareWith, l)) {
-      l.y--;
-    }
-  }
-
-  // Move it down, and keep moving it down if it's colliding.
+function compactItem(compareWith, l, verticalCompact, strategy) {
   var collides = void 0;
-  while (collides = getFirstCollision(compareWith, l)) {
-    l.y = collides.y + collides.h;
+  switch (strategy) {
+    case MoveAwayStrategy.SwapX:
+      while (collides = getFirstCollision(compareWith, l)) {
+        l.x = collides.x + collides.w;
+      }
+      return l;
+    case MoveAwayStrategy.Y:
+    default:
+      if (verticalCompact) {
+        // Bottom 'y' possible is the bottom of the layout.
+        // This allows you to do nice stuff like specify {y: Infinity}
+        // This is here because the layout must be sorted in order to get the correct bottom `y`.
+        l.y = Math.min(bottom(compareWith), l.y);
+
+        // Move the element up as far as it can go without colliding.
+        while (l.y > 0 && !getFirstCollision(compareWith, l)) {
+          l.y--;
+        }
+      }
+
+      // Move it down, and keep moving it down if it's colliding.
+      while (collides = getFirstCollision(compareWith, l)) {
+        l.y = collides.y + collides.h;
+      }
+      return l;
   }
-  return l;
 }
 
 /**
@@ -241,19 +264,17 @@ function getStatics(layout) {
  * @param  {Number}     [y]    Y position in grid units.
  * @param  {Boolean}    [isUserAction] If true, designates that the item we're moving is
  *                                     being dragged/resized by the user.
+ * @param {MoveAwayStrategy} moveStrategy
  */
-function moveElement(layout, l, x, y, isUserAction) {
+function moveElement(layout, l, x, y, isUserAction, moveStrategy) {
+
+  var fromPlaceholder = cloneLayoutItem(l);
+
   if (l.static) return layout;
 
   // Short-circuit if nothing to do.
   if (l.y === y && l.x === x) return layout;
 
-  // if (l.container) {
-  //   let a = l.x - x;
-  //   let b = l.y - y;
-  //   let c = getContainerElements(layout, l);
-  //   console.log(a, b, c);
-  // }
   var movingUp = y && l.y > y;
   // This is quite a bit faster than extending the object
   if (typeof x === 'number') l.x = x;
@@ -271,7 +292,6 @@ function moveElement(layout, l, x, y, isUserAction) {
   // Move each item that collides away from this element.
   for (var _i7 = 0, len = collisions.length; _i7 < len; _i7++) {
     var collision = collisions[_i7];
-    // console.log('resolving collision between', l.i, 'at', l.y, 'and', collision.i, 'at', collision.y);
 
     // Short circuit so we can't infinite loop
     if (collision.moved) continue;
@@ -281,9 +301,9 @@ function moveElement(layout, l, x, y, isUserAction) {
 
     // Don't move static items - we have to move *this* element away
     if (collision.static) {
-      layout = moveElementAwayFromCollision(layout, collision, l, isUserAction);
+      layout = moveElementAwayFromCollision(layout, collision, l, isUserAction, fromPlaceholder, moveStrategy);
     } else if (!collision.container) {
-      layout = moveElementAwayFromCollision(layout, l, collision, isUserAction);
+      layout = moveElementAwayFromCollision(layout, l, collision, isUserAction, fromPlaceholder, moveStrategy);
     }
   }
 
@@ -299,29 +319,52 @@ function moveElement(layout, l, x, y, isUserAction) {
  * @param  {LayoutItem} itemToMove   Layout item we're moving.
  * @param  {Boolean} [isUserAction]  If true, designates that the item we're moving is being dragged/resized
  *                                   by the user.
+ * @param  {LayoutItem} collidesWithFrom          collidesWith from clone
+ * @param  {MoveAwayStrategy} [strategy = MoveAwayStrategy.Y]
  */
-function moveElementAwayFromCollision(layout, collidesWith, itemToMove, isUserAction) {
-  // If there is enough space above the collision to put this element, move it there.
-  // We only do this on the main collision as this can get funky in cascades and cause
-  // unwanted swapping behavior.
-  if (isUserAction) {
-    // Make a mock item so we don't modify the item here, only modify in moveElement.
-    var fakeItem = {
-      x: itemToMove.x,
-      y: itemToMove.y,
-      w: itemToMove.w,
-      h: itemToMove.h,
-      i: '-1'
-    };
-    fakeItem.y = Math.max(collidesWith.y - itemToMove.h, 0);
-    if (!getFirstCollision(layout, fakeItem)) {
-      return moveElement(layout, itemToMove, undefined, fakeItem.y);
-    }
-  }
+function moveElementAwayFromCollision(layout, collidesWith, itemToMove, isUserAction, collidesWithFrom, strategy) {
 
-  // Previously this was optimized to move below the collision directly, but this can cause problems
-  // with cascading moves, as an item may actually leapfrog a collision and cause a reversal in order.
-  return moveElement(layout, itemToMove, undefined, itemToMove.y + 1);
+  switch (strategy) {
+    case MoveAwayStrategy.SwapX:
+      if (isUserAction) {
+        var fakeItem = {
+          x: itemToMove.x,
+          y: itemToMove.y,
+          w: itemToMove.w,
+          h: itemToMove.h,
+          i: '-1'
+        };
+        fakeItem.x = collidesWithFrom.w > itemToMove.w && collidesWithFrom.x < itemToMove.x ? collidesWithFrom.x : collidesWithFrom.x + (collidesWithFrom.w - itemToMove.w);
+        if (!getFirstCollision(layout, fakeItem)) {
+          return moveElement(layout, itemToMove, fakeItem.x, undefined);
+        }
+      }
+      return moveElement(layout, itemToMove, itemToMove.x + 1, undefined);
+    case MoveAwayStrategy.Y:
+    default:
+      // If there is enough space above the collision to put this element, move it there.
+      // We only do this on the main collision as this can get funky in cascades and cause
+      // unwanted swapping behavior.
+      if (isUserAction) {
+        // Make a mock item so we don't modify the item here, only modify in moveElement.
+        var _fakeItem = {
+          x: itemToMove.x,
+          y: itemToMove.y,
+          w: itemToMove.w,
+          h: itemToMove.h,
+          i: '-1'
+        };
+
+        _fakeItem.y = Math.max(collidesWith.y - itemToMove.h, 0);
+        if (!getFirstCollision(layout, _fakeItem)) {
+          return moveElement(layout, itemToMove, undefined, _fakeItem.y);
+        }
+      }
+      //
+      // Previously this was optimized to move below the collision directly, but this can cause problems
+      // with cascading moves, as an item may actually leapfrog a collision and cause a reversal in order.
+      return moveElement(layout, itemToMove, undefined, itemToMove.y + 1);
+  }
 }
 
 /**

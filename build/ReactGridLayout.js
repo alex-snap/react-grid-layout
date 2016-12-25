@@ -152,7 +152,7 @@ var ReactGridLayout = function (_React$Component) {
     }
 
     // Move the element to the dragged location.
-    layout = (0, _utils.moveElement)(layout, l, x, y, true /* isUserAction */);
+    layout = (0, _utils.moveElement)(layout, l, x, y, true /* isUserAction */, this.props.moveStrategy);
 
     this.props.onDrag(layout, oldDragItem, l, placeholder, e, node);
 
@@ -251,7 +251,7 @@ var ReactGridLayout = function (_React$Component) {
 
     // Re-compact the layout and set the drag placeholder.
     this.setState({
-      layout: (0, _utils.compact)(layout, this.props.verticalCompact),
+      layout: (0, _utils.compact)(layout, this.props.verticalCompact, this.props.moveStrategy),
       activeDrag: placeholder
     });
   };
@@ -443,6 +443,9 @@ ReactGridLayout.propTypes = {
 
   // If true, the layout will compact vertically
   verticalCompact: _react.PropTypes.bool,
+
+  // move item strategy with collides
+  moveStrategy: _react.PropTypes.string,
 
   // layout is an array of object with the format:
   // {x: Number, y: Number, w: Number, h: Number, i: String}
