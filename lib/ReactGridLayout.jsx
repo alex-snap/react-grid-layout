@@ -51,6 +51,9 @@ export default class ReactGridLayout extends React.Component {
     // If true, the layout will compact vertically
     verticalCompact: PropTypes.bool,
 
+    // move item strategy with collides
+    moveStrategy: PropTypes.string,
+
     // layout is an array of object with the format:
     // {x: Number, y: Number, w: Number, h: Number, i: String}
     layout: function (props) {
@@ -253,12 +256,12 @@ export default class ReactGridLayout extends React.Component {
     }
 
     // Move the element to the dragged location.
-    layout = moveElement(layout, l, x, y, true /* isUserAction */);
+    layout = moveElement(layout, l, x, y, true /* isUserAction */, this.props.moveStrategy);
 
     this.props.onDrag(layout, oldDragItem, l, placeholder, e, node);
 
     this.setState({
-      layout: compact(layout, this.props.verticalCompact),
+      layout: compact(layout, this.props.verticalCompact, this.props.moveStrategy),
       activeDrag: placeholder
     });
   }
@@ -338,7 +341,7 @@ export default class ReactGridLayout extends React.Component {
 
     // Re-compact the layout and set the drag placeholder.
     this.setState({
-      layout: compact(layout, this.props.verticalCompact),
+      layout: compact(layout, this.props.verticalCompact, this.props.moveStrategy),
       activeDrag: placeholder
     });
   }
