@@ -2,7 +2,7 @@
 import React, {PropTypes} from 'react';
 import isEqual from 'lodash.isequal';
 import {autoBindHandlers, bottom, childrenEqual, cloneLayoutItem, compact, getLayoutItem, moveElement,
-  synchronizeLayoutWithChildren, validateLayout} from './utils';
+  synchronizeLayoutWithChildren, validateLayout, getFirstCollision} from './utils';
 import GridItem from './GridItem';
 const noop = function() {};
 
@@ -105,6 +105,8 @@ export default class ReactGridLayout extends React.Component {
     onResize: PropTypes.func,
     // Calls when resize is complete.
     onResizeStop: PropTypes.func,
+    // Calls when element drop into container element
+    onDropIntoContainer: PropTypes.func,
 
     //
     // Other validations
@@ -235,10 +237,20 @@ export default class ReactGridLayout extends React.Component {
     var l = getLayoutItem(layout, i);
     if (!l) return;
 
-    // Create placeholder (display only)
-    var placeholder = {
-      w: l.w, h: l.h, x: l.x, y: l.y, placeholder: true, i: i
-    };
+    // если элемент пытаются поместить в контейнер
+    // создаем placeholder размером с этот контейнер
+    var c = getFirstCollision(layout, l);
+    var placeholder;
+    if (c && c.container) {
+      placeholder = {
+        w: c.w, h: c.h, x: c.x, y: c.y, placeholder: true, i: i
+      };
+    } else {
+      // Create placeholder (display only)
+      placeholder = {
+        w: l.w, h: l.h, x: l.x, y: l.y, placeholder: true, i: i
+      };
+    }
 
     // Move the element to the dragged location.
     layout = moveElement(layout, l, x, y, true /* isUserAction */);
@@ -265,9 +277,14 @@ export default class ReactGridLayout extends React.Component {
     const l = getLayoutItem(layout, i);
     if (!l) return;
 
+    var c = getFirstCollision(layout, l);
+    // Если элемент перемещается в контейнер вызываем событие
+    if (c && c.container) {
+      this.props.onDropIntoContainer(layout, oldDragItem, c, e, node);
+    }
+
     // Move the element here
     layout = moveElement(layout, l, x, y, true /* isUserAction */);
-
     this.props.onDragStop(layout, oldDragItem, l, null, e, node);
 
     // Set state
@@ -426,6 +443,7 @@ export default class ReactGridLayout extends React.Component {
         maxH={l.maxH}
         maxW={l.maxW}
         static={l.static}
+        container={l.container}
         >
         {child}
       </GridItem>
