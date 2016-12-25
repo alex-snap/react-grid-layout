@@ -323,7 +323,6 @@ function moveElement(layout, l, x, y, isUserAction, moveStrategy) {
  * @param  {MoveAwayStrategy} [strategy = MoveAwayStrategy.Y]
  */
 function moveElementAwayFromCollision(layout, collidesWith, itemToMove, isUserAction, collidesWithFrom, strategy) {
-
   switch (strategy) {
     case MoveAwayStrategy.SwapX:
       if (isUserAction) {
