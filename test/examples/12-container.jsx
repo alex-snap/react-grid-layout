@@ -17,8 +17,8 @@ var NestedLayout = React.createClass({
   getDefaultProps() {
     return {
       className: "layout",
-      items: 20,
-      rowHeight: 30,
+      items: 3,
+      rowHeight: 100,
       cols: 12,
       verticalCompact: false
     };
@@ -51,11 +51,10 @@ var NestedLayout = React.createClass({
       var y = _.result(p, 'y') || Math.ceil(Math.random() * 4) + 1;
       return {
         x: i * 2 % 12,
-        y: Math.floor(i / 6) * y,
-        w: 2,
-        h: y,
-        i: i.toString(),
-        container: Math.random() < 0.5
+        y: 0,
+        w: 1,
+        h: 1,
+        i: i.toString()
       };
     });
   },
@@ -75,6 +74,8 @@ var NestedLayout = React.createClass({
         onLayoutChange={this.onLayoutChange}
         onDragStop={this.onDragStop}
         onDropIntoContainer={this.onDropIntoContainer}
+        verticalCompact={false}
+        moveStrategy='swapX'
           {...this.props}>
         {this.generateDOM()}
       </ReactGridLayout>
