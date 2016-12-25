@@ -4,3 +4,4 @@ dist/*
 !dist/*.html
 npm-debug.log
 .idea
+build/*
