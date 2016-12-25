@@ -334,12 +334,13 @@ function moveElementAwayFromCollision(layout, collidesWith, itemToMove, isUserAc
           h: itemToMove.h,
           i: '-1'
         };
-        fakeItem.x = collidesWithFrom.w > itemToMove.w && collidesWithFrom.x < itemToMove.x ? collidesWithFrom.x : collidesWithFrom.x + (collidesWithFrom.w - itemToMove.w);
+
+        fakeItem.x = collidesWithFrom.w >= itemToMove.w && collidesWithFrom.x < itemToMove.x ? collidesWithFrom.x : collidesWith.x + collidesWithFrom.w;
         if (!getFirstCollision(layout, fakeItem)) {
-          return moveElement(layout, itemToMove, fakeItem.x, undefined);
+          return moveElement(layout, itemToMove, fakeItem.x, undefined, false, strategy);
         }
       }
-      return moveElement(layout, itemToMove, itemToMove.x + 1, undefined);
+      return moveElement(layout, itemToMove, itemToMove.x + 1, undefined, false, strategy);
     case MoveAwayStrategy.Y:
     default:
       // If there is enough space above the collision to put this element, move it there.
@@ -357,13 +358,13 @@ function moveElementAwayFromCollision(layout, collidesWith, itemToMove, isUserAc
 
         _fakeItem.y = Math.max(collidesWith.y - itemToMove.h, 0);
         if (!getFirstCollision(layout, _fakeItem)) {
-          return moveElement(layout, itemToMove, undefined, _fakeItem.y);
+          return moveElement(layout, itemToMove, undefined, _fakeItem.y, false, strategy);
         }
       }
       //
       // Previously this was optimized to move below the collision directly, but this can cause problems
       // with cascading moves, as an item may actually leapfrog a collision and cause a reversal in order.
-      return moveElement(layout, itemToMove, undefined, itemToMove.y + 1);
+      return moveElement(layout, itemToMove, undefined, itemToMove.y + 1, false, strategy);
   }
 }
 
